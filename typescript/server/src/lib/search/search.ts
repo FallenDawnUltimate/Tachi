@@ -15,16 +15,12 @@ import {
 	type ChartDocument,
 	type FolderDocument,
 	type GameGroup,
+	type GamesForGroup,
 	type integer,
-	LEGACY_GameGroupPTToGame,
-	LEGACY_GameToGameGroupPT,
-	type LEGACY_GPTStrings,
-	type LEGACY_Playtype,
 	type SongDocument,
 	type UserDocument,
 	type V3Game,
 } from "tachi-common";
-import { type Game } from "tachi-db";
 
 import { SearchFoldersFtsAndTrgmGlobal } from "./folders";
 import { type SearchSessionHit, SearchSessionsForUserGptFtsAndTrgm } from "./session-search";
@@ -34,18 +30,11 @@ export type { SearchSessionHit } from "./session-search";
 
 export function SearchSessions(
 	search: string,
-	game?: GameGroup,
-	playtype?: LEGACY_Playtype,
-	userID?: integer,
+	game: V3Game,
+	userID: integer,
 	limit = 100,
 ): Promise<Array<SearchSessionHit>> {
-	if (game === undefined || playtype === undefined || userID === undefined) {
-		return Promise.resolve([]);
-	}
-
-	const v3Game = LEGACY_GameGroupPTToGame(game, playtype) as Game;
-
-	return SearchSessionsForUserGptFtsAndTrgm(userID, v3Game, search, limit);
+	return SearchSessionsForUserGptFtsAndTrgm(userID, game, search, limit);
 }
 
 /**
@@ -120,26 +109,24 @@ export async function SearchForChartHash(search: string) {
 	]);
 
 	const output: Record<
-		LEGACY_GPTStrings["bms" | "itg" | "pms" | "usc"],
+		GamesForGroup["bms" | "itg" | "pms" | "usc"],
 		Array<{
 			chart: ChartDocument;
 			playcount: null;
 			song: SongDocument;
 		}>
 	> = {
-		"bms:7K": [],
-		"bms:14K": [],
-		"pms:Controller": [],
-		"pms:Keyboard": [],
-		"usc:Controller": [],
-		"usc:Keyboard": [],
-		"itg:Stamina": [],
+		"bms-7k": [],
+		"bms-14k": [],
+		"pms-controller": [],
+		"pms-keyboard": [],
+		"usc-controller": [],
+		"usc-keyboard": [],
+		"itg-stamina": [],
 	};
 
 	const push = async (chart: ChartDocument) => {
-		const { gameGroup, playtype } = LEGACY_GameToGameGroupPT(chart.game);
-		const key = `${gameGroup}:${playtype}` as keyof typeof output;
-
+		const key = chart.game as GamesForGroup["bms" | "itg" | "pms" | "usc"];
 		if (!(key in output)) {
 			return;
 		}
